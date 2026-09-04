@@ -4,304 +4,298 @@ from pathlib import Path
 import re
 
 
-def app():
-    st.set_page_config(
-        page_title="Winter Arc",
-        page_icon="❄️",
-        layout="wide",
-        initial_sidebar_state="collapsed",
-    )
+st.set_page_config(
+    page_title="Winter Arc",
+    page_icon="❄️",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 
+
+def load_winter_arc():
     jsx_path = Path(__file__).with_name("winter-arc.jsx")
-    jsx = jsx_path.read_text(encoding="utf-8")
+    source = jsx_path.read_text(encoding="utf-8")
 
-    # ---------------------------------------------------------
-    # Remove the original npm imports because the browser will
-    # load the UMD versions of React, Lucide and Recharts.
-    # ---------------------------------------------------------
+    # ------------------------------------------------------------
+    # 1. Remove the original package imports.
+    #
+    # The original JSX imports React, lucide-react and recharts.
+    # We provide those through browser-native ESM imports instead.
+    # ------------------------------------------------------------
 
-    jsx = re.sub(
-        r'^import React,.*?;\n',
+    source = re.sub(
+        r'import\s+React,\s*\{[\s\S]*?\}\s+from\s+["\']react["\'];?\s*',
         '',
-        jsx,
+        source,
         count=1,
-        flags=re.S,
     )
 
-    jsx = re.sub(
-        r'^import \{.*?\} from "recharts";\n',
+    source = re.sub(
+        r'import\s*\{[\s\S]*?\}\s*from\s*["\']lucide-react["\'];?\s*',
         '',
-        jsx,
+        source,
         count=1,
-        flags=re.S,
     )
 
-    jsx = jsx.replace(
-        'export default function App()',
-        'function App()',
+    source = re.sub(
+        r'import\s*\{[\s\S]*?\}\s*from\s*["\']recharts["\'];?\s*',
+        '',
+        source,
+        count=1,
     )
 
-    # ---------------------------------------------------------
-    # Replace window.storage with browser localStorage.
-    # ---------------------------------------------------------
+    # Remove ES module export.
+    source = re.sub(
+        r'export\s+default\s+',
+        '',
+        source,
+        count=1,
+    )
 
-    jsx = jsx.replace(
-        '''const res = await window.storage.get(STORAGE_KEY, false);
+    # ------------------------------------------------------------
+    # 2. Replace the original window.storage API with localStorage.
+    #
+    # Streamlit's iframe does not provide window.storage.
+    # ------------------------------------------------------------
+
+    source = source.replace(
+        """const res = await window.storage.get(STORAGE_KEY, false);
         if (res?.value) {
-          setState(JSON.parse(res.value));''',
-        '''const value = localStorage.getItem(STORAGE_KEY);
+          setState(JSON.parse(res.value));""",
+        """const value = localStorage.getItem(STORAGE_KEY);
         if (value) {
-          setState(JSON.parse(value));''',
+          setState(JSON.parse(value));"""
     )
 
-    jsx = jsx.replace(
-        '''const res = await window.storage.set(STORAGE_KEY, JSON.stringify(state), false);
-        if (!res) setStorageStatus("unavailable");''',
-        '''localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        setStorageStatus("ok");''',
+    source = source.replace(
+        """const res = await window.storage.set(STORAGE_KEY, JSON.stringify(state), false);
+        if (!res) setStorageStatus("unavailable");""",
+        """localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        setStorageStatus("ok");"""
     )
 
-    # ---------------------------------------------------------
-    # Browser-side globals.
+    # ------------------------------------------------------------
+    # 3. Browser-native module imports.
     #
-    # IMPORTANT:
-    # We deliberately do NOT declare:
-    #     const React = window.React;
-    #
-    # The previous version did that while also passing React
-    # into new Function(), causing:
-    #
-    # Identifier 'React' has already been declared
-    # ---------------------------------------------------------
+    # React and ReactDOM come from esm.sh.
+    # Lucide and Recharts are also loaded as real ESM modules,
+    # avoiding the CommonJS "require is not defined" problem.
+    # ------------------------------------------------------------
 
-    prelude = r'''
-const {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef
-} = window.React;
+    imports = r"""
+import React, {
+    useState,
+    useEffect,
+    useMemo,
+    useCallback,
+    useRef
+} from "https://esm.sh/react@18.3.1";
 
-const {
-  Snowflake,
-  Dumbbell,
-  Activity,
-  Beef,
-  Droplet,
-  Moon,
-  BookOpen,
-  Sparkles,
-  Settings: SettingsIcon,
-  Calendar,
-  BarChart3,
-  Home,
-  Plus,
-  Trash2,
-  GripVertical,
-  Check,
-  X,
-  Clock,
-  Flame,
-  ChevronLeft,
-  ChevronRight,
-  Star,
-  Download,
-  Upload,
-  RotateCcw,
-  AlertCircle,
-  ChevronDown,
-  MoreVertical,
-  SkipForward,
-  PencilLine,
-  Sunrise,
-  Wind,
-  Shirt,
-  Sparkle,
-  Utensils,
-  Sofa,
-  ListChecks,
-  CircleCheck,
-  CircleDashed,
-  CircleSlash,
-  Ban
-} = window.LucideReact;
+import ReactDOM from "https://esm.sh/react-dom@18.3.1/client";
 
-const {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ScatterChart,
-  Scatter,
-  ZAxis,
-  Cell
-} = window.Recharts;
-'''
+import {
+    Snowflake,
+    Dumbbell,
+    Activity,
+    Beef,
+    Droplet,
+    Moon,
+    BookOpen,
+    Sparkles,
+    Settings as SettingsIcon,
+    Calendar,
+    BarChart3,
+    Home,
+    Plus,
+    Trash2,
+    GripVertical,
+    Check,
+    X,
+    Clock,
+    Flame,
+    ChevronLeft,
+    ChevronRight,
+    Star,
+    Download,
+    Upload,
+    RotateCcw,
+    AlertCircle,
+    ChevronDown,
+    MoreVertical,
+    SkipForward,
+    PencilLine,
+    Sunrise,
+    Wind,
+    Shirt,
+    Sparkle,
+    Utensils,
+    Sofa,
+    ListChecks,
+    CircleCheck,
+    CircleDashed,
+    CircleSlash,
+    Ban
+} from "https://esm.sh/lucide-react@0.468.0";
 
-    # ---------------------------------------------------------
-    # Build the complete JavaScript application source.
-    # ---------------------------------------------------------
+import {
+    ResponsiveContainer,
+    LineChart,
+    Line,
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ScatterChart,
+    Scatter,
+    ZAxis,
+    Cell
+} from "https://esm.sh/recharts@2.12.7";
+"""
 
-    app_source = (
-        prelude
-        + "\n"
-        + jsx
-        + '''
-        
-const root = window.ReactDOM.createRoot(
-  document.getElementById("root")
+    # ------------------------------------------------------------
+    # 4. Mount React.
+    # ------------------------------------------------------------
+
+    source += r"""
+
+const root = ReactDOM.createRoot(
+    document.getElementById("root")
 );
 
 root.render(
-  window.React.createElement(App)
+    React.createElement(App)
 );
-'''
-    )
+"""
 
-    # repr() safely transfers the entire JSX source into the
-    # iframe without Python/Javascript quoting collisions.
-    app_source_js = repr(app_source)
+    # ------------------------------------------------------------
+    # 5. Build HTML.
+    # ------------------------------------------------------------
 
-    html = f'''<!doctype html>
+    html = f"""
+<!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8" />
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1"
-/>
+    <style>
+        html,
+        body,
+        #root {{
+            margin: 0;
+            padding: 0;
+            min-height: 100%;
+            width: 100%;
+            background: #0A0F14;
+        }}
 
-<script
-  crossorigin
-  src="https://unpkg.com/react@18/umd/react.production.min.js">
-</script>
+        body {{
+            overflow-x: hidden;
+        }}
 
-<script
-  crossorigin
-  src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js">
-</script>
-
-<script
-  src="https://unpkg.com/@babel/standalone/babel.min.js">
-</script>
-
-<script
-  src="https://unpkg.com/lucide-react@0.468.0/dist/umd/lucide-react.js">
-</script>
-
-<script
-  src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js">
-</script>
-
-<style>
-html,
-body,
-#root {{
-    margin: 0;
-    min-height: 100%;
-    background: #0A0F14;
-}}
-
-body {{
-    overflow-x: hidden;
-}}
-</style>
+        * {{
+            box-sizing: border-box;
+        }}
+    </style>
 </head>
 
 <body>
 
 <div id="root"></div>
 
-<script>
-/*
- * Normalize the globals exposed by the UMD builds.
- */
-window.LucideReact =
-    window.LucideReact ||
-    window.lucideReact ||
-    window.lucide;
+<script src="https://unpkg.com/@babel/standalone@7.26.0/babel.min.js"></script>
 
-window.Recharts =
-    window.Recharts ||
-    window.recharts;
+<script type="text/plain" id="winter-arc-source">
+{imports}
+
+{source}
 </script>
 
 <script>
-const appSource = {app_source_js};
+(async () => {{
+    const root = document.getElementById("root");
 
-try {{
+    try {{
+        // Read the JSX/module source.
+        const source = document.getElementById(
+            "winter-arc-source"
+        ).textContent;
 
-    /*
-     * Babel converts the JSX from winter-arc.jsx into
-     * normal JavaScript.
-     */
-    const transformed = Babel.transform(
-        appSource,
-        {{
-            presets: ["react"],
-            sourceType: "script"
-        }}
-    ).code;
+        // Babel converts JSX into normal JavaScript.
+        const transformed = Babel.transform(
+            source,
+            {{
+                presets: ["react"],
+                sourceType: "module"
+            }}
+        ).code;
 
-    /*
-     * IMPORTANT:
-     *
-     * Only `window` is passed into the generated function.
-     *
-     * The previous version passed React and ReactDOM as
-     * function parameters while also declaring React inside
-     * the generated source, which caused the duplicate
-     * identifier error.
-     */
-    const run = new Function(
-        "window",
-        transformed
-    );
+        // Create a Blob URL so the browser can execute
+        // the transformed JavaScript as a real ES module.
+        const blob = new Blob(
+            [transformed],
+            {{ type: "text/javascript" }}
+        );
 
-    run(window);
+        const moduleUrl = URL.createObjectURL(blob);
 
-}} catch (e) {{
+        await import(moduleUrl);
 
-    document.getElementById("root").innerHTML =
-        '<pre style="' +
-        'color:#ff8f8f;' +
-        'padding:20px;' +
-        'white-space:pre-wrap;' +
-        'font-family:monospace;' +
-        '">' +
-        'Winter Arc failed to load\\n\\n' +
-        String(e.stack || e) +
-        '</pre>';
+        URL.revokeObjectURL(moduleUrl);
 
-    console.error(e);
-}}
+    }} catch (error) {{
+        console.error(error);
+
+        root.innerHTML = `
+            <div style="
+                min-height:100vh;
+                background:#0A0F14;
+                color:#E7EEF2;
+                padding:32px;
+                font-family:Inter,system-ui,sans-serif;
+            ">
+                <h2 style="
+                    color:#C9E8F5;
+                    margin-bottom:12px;
+                ">
+                    Winter Arc failed to load
+                </h2>
+
+                <pre style="
+                    color:#ff9b9b;
+                    white-space:pre-wrap;
+                    line-height:1.5;
+                    font-size:13px;
+                ">${{
+                    String(error.stack || error)
+                }}</pre>
+            </div>
+        `;
+    }}
+}})();
 </script>
 
 </body>
-</html>'''
+</html>
+"""
 
-    # ---------------------------------------------------------
-    # Render React application inside Streamlit.
-    # ---------------------------------------------------------
+    return html
+
+
+def app():
+    html = load_winter_arc()
 
     components.html(
         html,
-        height=1100,
+        height=1400,
         scrolling=True,
     )
 
-
-# -------------------------------------------------------------
-# Required by your deployment environment AND works normally
-# with `streamlit run app.py`.
-# -------------------------------------------------------------
 
 if __name__ == "__main__":
     app()
