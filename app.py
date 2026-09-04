@@ -68,12 +68,12 @@ import {
   Download, Upload, RotateCcw, AlertCircle, ChevronDown, MoreVertical,
   SkipForward, PencilLine, Sunrise, Wind, Shirt, Sparkle, Utensils, Sofa,
   ListChecks, CircleCheck, CircleDashed, CircleSlash, Ban
-} from "https://esm.sh/lucide-react@0.468.0?external=react";
+} from "https://esm.sh/lucide-react@0.468.0?deps=react@18.3.1";
 
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ScatterChart, Scatter, ZAxis, Cell
-} from "https://esm.sh/recharts@2.12.7?external=react,react-dom";
+} from "https://esm.sh/recharts@2.12.7?deps=react@18.3.1,react-dom@18.3.1";
 '''
 
     mount = r'''
