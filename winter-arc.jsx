@@ -217,19 +217,19 @@ function computeStreaks(state) {
 
 function defaultTasks() {
   return [
-    { id: "gym", name: "Gym", category: "training", fixed: true, frequency: { type: "weekdays", days: [1, 2, 4, 5, 6] }, time: "17:30", priority: 2, reminderEnabled: true, message: "Time to train. Showing up is part of the system.", order: 0 },
-    { id: "cardio", name: "Cardio", category: "training", fixed: true, frequency: { type: "daily" }, time: "18:20", priority: 3, reminderEnabled: true, message: "A short session keeps the engine running.", order: 1 },
-    { id: "protein", name: "Protein Target", category: "nutrition", fixed: true, frequency: { type: "daily" }, time: "13:00", priority: 2, reminderEnabled: true, message: "Hit your protein target — check HealthifyMe.", order: 2 },
-    { id: "hydration", name: "Hydration Target", category: "hydration", fixed: true, frequency: { type: "daily" }, time: "15:00", priority: 3, reminderEnabled: true, message: "Water first. Everything runs better hydrated.", order: 3 },
-    { id: "start-day", name: "Start Day", category: "routine", fixed: false, frequency: { type: "daily" }, time: "08:00", priority: 2, reminderEnabled: true, message: "Start the day deliberately. Ordinary days, done properly.", order: 4 },
-    { id: "bath", name: "Bath / Hygiene", category: "maintenance", fixed: false, frequency: { type: "daily" }, time: "08:15", priority: 2, reminderEnabled: false, message: "Start clean, start deliberate.", order: 5 },
-    { id: "clothes", name: "Clothes Maintained", category: "maintenance", fixed: false, frequency: { type: "daily" }, time: "09:00", priority: 1, reminderEnabled: false, message: "", order: 6 },
-    { id: "room", name: "Room Cleaned", category: "maintenance", fixed: false, frequency: { type: "asNeeded" }, time: "19:30", priority: 1, reminderEnabled: false, message: "", order: 7 },
-    { id: "desk", name: "Desk Organized", category: "maintenance", fixed: false, frequency: { type: "daily" }, time: "19:45", priority: 1, reminderEnabled: false, message: "", order: 8 },
-    { id: "utensils", name: "Utensils / Dishes", category: "maintenance", fixed: false, frequency: { type: "daily" }, time: "21:00", priority: 1, reminderEnabled: false, message: "", order: 9 },
-    { id: "laundry", name: "Laundry", category: "maintenance", fixed: false, frequency: { type: "weekdays", days: [3, 6] }, time: "19:00", priority: 1, reminderEnabled: false, message: "", order: 10 },
-    { id: "chores", name: "Other Chores", category: "maintenance", fixed: false, frequency: { type: "asNeeded" }, time: "20:15", priority: 1, reminderEnabled: false, message: "", order: 11 },
-    { id: "environment-reset", name: "Environment Reset", category: "routine", fixed: false, frequency: { type: "daily" }, time: "20:30", priority: 2, reminderEnabled: true, message: "Reset your environment now so tomorrow starts clean.", order: 12 },
+    { id: "gym", name: "Gym", category: "training", fixed: true, frequency: { type: "weekdays", days: [1, 2, 4, 5, 6] }, priority: 2, reminderEnabled: true, message: "Time to train. Showing up is part of the system.", order: 0 },
+    { id: "cardio", name: "Cardio", category: "training", fixed: true, frequency: { type: "daily" }, priority: 3, reminderEnabled: true, message: "A short session keeps the engine running.", order: 1 },
+    { id: "protein", name: "Protein Target", category: "nutrition", fixed: true, frequency: { type: "daily" }, priority: 2, reminderEnabled: true, message: "Hit your protein target — check HealthifyMe.", order: 2 },
+    { id: "hydration", name: "Hydration Target", category: "hydration", fixed: true, frequency: { type: "daily" }, priority: 3, reminderEnabled: true, message: "Water first. Everything runs better hydrated.", order: 3 },
+    { id: "start-day", name: "Start Day", category: "routine", fixed: false, frequency: { type: "daily" }, priority: 2, reminderEnabled: true, message: "Start the day deliberately. Ordinary days, done properly.", order: 4 },
+    { id: "bath", name: "Bath / Hygiene", category: "maintenance", fixed: false, frequency: { type: "daily" }, priority: 2, reminderEnabled: false, message: "Start clean, start deliberate.", order: 5 },
+    { id: "clothes", name: "Clothes Maintained", category: "maintenance", fixed: false, frequency: { type: "daily" }, priority: 1, reminderEnabled: false, message: "", order: 6 },
+    { id: "room", name: "Room Cleaned", category: "maintenance", fixed: false, frequency: { type: "asNeeded" }, priority: 1, reminderEnabled: false, message: "", order: 7 },
+    { id: "desk", name: "Desk Organized", category: "maintenance", fixed: false, frequency: { type: "daily" }, priority: 1, reminderEnabled: false, message: "", order: 8 },
+    { id: "utensils", name: "Utensils / Dishes", category: "maintenance", fixed: false, frequency: { type: "daily" }, priority: 1, reminderEnabled: false, message: "", order: 9 },
+    { id: "laundry", name: "Laundry", category: "maintenance", fixed: false, frequency: { type: "weekdays", days: [3, 6] }, priority: 1, reminderEnabled: false, message: "", order: 10 },
+    { id: "chores", name: "Other Chores", category: "maintenance", fixed: false, frequency: { type: "asNeeded" }, priority: 1, reminderEnabled: false, message: "", order: 11 },
+    { id: "environment-reset", name: "Environment Reset", category: "routine", fixed: false, frequency: { type: "daily" }, priority: 2, reminderEnabled: true, message: "Reset your environment now so tomorrow starts clean.", order: 12 },
   ];
 }
 
@@ -358,32 +358,20 @@ function useClock() {
 
 function getNextTask(state, dateStr, now) {
   const rec = getRecord(state.records, dateStr);
-  const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
-  const candidates = [];
 
-  for (const task of state.tasks) {
-    if (!task.reminderEnabled) continue;
-    if (!isScheduledToday(task, dateStr)) continue;
-    const ov = rec.overrides?.[task.id];
-    if (ov?.skippedToday) continue;
-    if (rec.status?.[task.id] === "completed") continue;
-    const time = ov?.time || task.time;
-    candidates.push({ kind: "task", task, time, minutes: timeToMin(time) });
-  }
+  // Activities do not have scheduled times.
+  // Only sleep is time-based.
   if (!(rec.sleep?.bedtime && rec.sleep?.wake)) {
-    candidates.push({ kind: "sleep", time: state.settings.sleep.idealBedtime, minutes: timeToMin(state.settings.sleep.idealBedtime), message: "It's time for a good night's sleep for better recovery and keeping tomorrow going." });
-  }
-  if ((rec.deepWork?.durationMin || 0) < state.settings.deepWorkTargetMin) {
-    candidates.push({ kind: "deepwork", time: "10:00", minutes: timeToMin("10:00"), message: "Protect this block. Two focused hours beat distracted studying." });
+    return {
+      kind: "sleep",
+      time: state.settings.sleep.idealBedtime,
+      minutes: timeToMin(state.settings.sleep.idealBedtime),
+      message:
+        "It's time for a good night's sleep for better recovery and keeping tomorrow going."
+    };
   }
 
-  candidates.sort((a, b) => a.minutes - b.minutes);
-  const upcoming = candidates.find((c) => c.minutes >= nowMin);
-  const chosen = upcoming || candidates[0];
-  if (!chosen) return null;
-  const overdue = chosen.minutes < nowMin;
-  const diff = overdue ? nowMin - chosen.minutes : chosen.minutes - nowMin;
-  return { ...chosen, overdue, diffMin: diff };
+  return null;
 }
 
 function ReminderClock({ state, dateStr, onAction }) {
@@ -455,13 +443,11 @@ function ReminderClock({ state, dateStr, onAction }) {
 
 /* ============================== TASK ROW ============================== */
 
-function TaskRow({ task, dateStr, record, onToggle, onSkip, onReschedule }) {
+function TaskRow({ task, dateStr, record, onToggle, onSkip }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [rescheduling, setRescheduling] = useState(false);
   const ov = record.overrides?.[task.id];
   const done = record.status?.[task.id] === "completed";
   const skipped = ov?.skippedToday;
-  const time = ov?.time || task.time;
   const Icon = TASK_ICONS[task.id] || CATEGORY_META[task.category]?.icon || ListChecks;
 
   return (
@@ -474,42 +460,48 @@ function TaskRow({ task, dateStr, record, onToggle, onSkip, onReschedule }) {
       >
         {done ? <Check size={14} /> : skipped ? <SkipForward size={13} /> : null}
       </button>
-      <div className="task-icon"><Icon size={15} /></div>
+
+      <div className="task-icon">
+        <Icon size={15} />
+      </div>
+
       <div className="task-main">
         <span className="task-name">{task.name}</span>
-        <span className="task-time">{minToTime12(timeToMin(time))}</span>
       </div>
+
       {skipped && <span className="task-tag">Excused</span>}
+
       <div className="task-menu-wrap">
-        <IconBtn icon={MoreVertical} label="Task actions" onClick={() => setMenuOpen((v) => !v)} />
+        <IconBtn
+          icon={MoreVertical}
+          label="Task actions"
+          onClick={() => setMenuOpen((v) => !v)}
+        />
+
         {menuOpen && (
           <div className="task-menu" onMouseLeave={() => setMenuOpen(false)}>
-            <button onClick={() => { onToggle(task.id); setMenuOpen(false); }}>
-              <Check size={13} /> {done ? "Mark incomplete" : "Mark complete"}
+            <button onClick={() => {
+              onToggle(task.id);
+              setMenuOpen(false);
+            }}>
+              <Check size={13} />
+              {done ? "Mark incomplete" : "Mark complete"}
             </button>
-            <button onClick={() => { setRescheduling(true); setMenuOpen(false); }}>
-              <Clock size={13} /> Reschedule time
-            </button>
-            <button onClick={() => { onSkip(task.id, !skipped); setMenuOpen(false); }}>
-              <SkipForward size={13} /> {skipped ? "Undo excuse" : "Skip today (excused)"}
+
+            <button onClick={() => {
+              onSkip(task.id, !skipped);
+              setMenuOpen(false);
+            }}>
+              <SkipForward size={13} />
+              {skipped ? "Undo excuse" : "Skip today (excused)"}
             </button>
           </div>
         )}
       </div>
-      {rescheduling && (
-        <div className="reschedule-pop">
-          <input
-            type="time"
-            defaultValue={time}
-            autoFocus
-            onBlur={(e) => { onReschedule(task.id, e.target.value); setRescheduling(false); }}
-            onKeyDown={(e) => { if (e.key === "Enter") { onReschedule(task.id, e.target.value); setRescheduling(false); } }}
-          />
-        </div>
-      )}
     </div>
   );
 }
+
 
 /* ============================== TODAY VIEW ============================== */
 
@@ -536,9 +528,6 @@ function TodayView({ state, dateStr, setState }) {
   });
   const skipTask = (taskId, val) => updateRecord((r) => {
     r.overrides[taskId] = { ...(r.overrides[taskId] || {}), skippedToday: val };
-  });
-  const rescheduleTask = (taskId, time) => updateRecord((r) => {
-    r.overrides[taskId] = { ...(r.overrides[taskId] || {}), time };
   });
   const clockAction = (action, taskId) => {
     if (action === "complete") toggleTask(taskId);
@@ -598,21 +587,21 @@ function TodayView({ state, dateStr, setState }) {
       {grouped.training && (
         <Section title="Training" catKey="training">
           {grouped.training.map((t) => (
-            <TaskRow key={t.id} task={t} dateStr={dateStr} record={rec} onToggle={toggleTask} onSkip={skipTask} onReschedule={rescheduleTask} />
+            <TaskRow key={t.id} task={t} dateStr={dateStr} record={rec} onToggle={toggleTask} onSkip={skipTask} />
           ))}
         </Section>
       )}
       {grouped.nutrition && (
         <Section title="Nutrition" catKey="nutrition">
           {grouped.nutrition.map((t) => (
-            <TaskRow key={t.id} task={t} dateStr={dateStr} record={rec} onToggle={toggleTask} onSkip={skipTask} onReschedule={rescheduleTask} />
+            <TaskRow key={t.id} task={t} dateStr={dateStr} record={rec} onToggle={toggleTask} onSkip={skipTask} />
           ))}
         </Section>
       )}
       {grouped.hydration && (
         <Section title="Hydration" catKey="hydration">
           {grouped.hydration.map((t) => (
-            <TaskRow key={t.id} task={t} dateStr={dateStr} record={rec} onToggle={toggleTask} onSkip={skipTask} onReschedule={rescheduleTask} />
+            <TaskRow key={t.id} task={t} dateStr={dateStr} record={rec} onToggle={toggleTask} onSkip={skipTask} />
           ))}
         </Section>
       )}
@@ -681,7 +670,7 @@ function TodayView({ state, dateStr, setState }) {
       {(grouped.maintenance || grouped.routine) && (
         <Section title="Maintenance & Environment" catKey="maintenance">
           {[...(grouped.routine || []), ...(grouped.maintenance || [])].map((t) => (
-            <TaskRow key={t.id} task={t} dateStr={dateStr} record={rec} onToggle={toggleTask} onSkip={skipTask} onReschedule={rescheduleTask} />
+            <TaskRow key={t.id} task={t} dateStr={dateStr} record={rec} onToggle={toggleTask} onSkip={skipTask} />
           ))}
         </Section>
       )}
@@ -785,10 +774,6 @@ function RoutineTaskCard({ task, onUpdate, onDelete, dragHandleProps }) {
               </select>
             </label>
             <label className="field small">
-              <span>Time</span>
-              <input type="time" value={task.time} onChange={(e) => onUpdate({ ...task, time: e.target.value })} />
-            </label>
-            <label className="field small">
               <span>Priority</span>
               <select value={task.priority} onChange={(e) => onUpdate({ ...task, priority: Number(e.target.value) })}>
                 <option value={1}>Low</option>
@@ -838,7 +823,7 @@ function RoutineView({ state, setState }) {
       ...s,
       tasks: [...s.tasks, {
         id, name: "New Task", category: "routine", fixed: false,
-        frequency: { type: "daily" }, time: "12:00", priority: 1,
+        frequency: { type: "daily" }, priority: 1,
         reminderEnabled: false, message: "", order: s.tasks.length,
       }],
     }));
@@ -1227,56 +1212,239 @@ const NAV = [
   { key: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
+function AuthScreen({ onLogin }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    if (authError) setError(authError.message);
+    else onLogin();
+    setBusy(false);
+  };
+
+  return (
+    <div className="wa-root">
+      <style>{CSS}</style>
+      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
+        <form onSubmit={submit} className="section-card" style={{ width: "min(420px, 100%)" }}>
+          <div className="section-head"><Snowflake size={18} /><h3>Winter Arc</h3></div>
+          <div className="section-body">
+            <p className="muted-text" style={{ maxWidth: "none" }}>
+              Sign in to access your synced Winter Arc data.
+            </p>
+            <label className="field">
+              <span>Email</span>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+            </label>
+            <label className="field">
+              <span>Password</span>
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+            </label>
+            {error && <div className="banner warn"><AlertCircle size={15} />{error}</div>}
+            <button className="btn" type="submit" disabled={busy} style={{ width: "100%", justifyContent: "center" }}>
+              {busy ? "Signing in…" : "Sign in"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [state, setState] = useState(null);
+  const [session, setSession] = useState(undefined);
   const [tab, setTab] = useState("today");
   const [storageStatus, setStorageStatus] = useState("loading");
   const [toast, setToast] = useState(null);
   const saveTimer = useRef(null);
+  const hydratedRef = useRef(false);
   const dateStr = clampDateInRange(todayStr(), state?.settings.startDate || ARC_START_DEFAULT, state?.settings.endDate || ARC_END_DEFAULT);
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2200); };
 
-  // Load
   useEffect(() => {
+    let mounted = true;
+    const init = async () => {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!mounted) return;
+      setSession(currentSession);
+    };
+    init();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!mounted) return;
+      setSession(nextSession);
+      if (!nextSession) {
+        hydratedRef.current = false;
+        setState(null);
+        setStorageStatus("loading");
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (session === undefined) return;
+    if (!session?.user) return;
+
+    let cancelled = false;
+    hydratedRef.current = false;
+    setState(null);
+    setStorageStatus("loading");
+
     (async () => {
       try {
-        const res = await window.storage.get(STORAGE_KEY, false);
-        if (res?.value) {
-          setState(JSON.parse(res.value));
-          setStorageStatus("ok");
+        const userId = session.user.id;
+
+        const { data: existingProfile, error: profileLookupError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", userId)
+          .maybeSingle();
+        if (profileLookupError) throw profileLookupError;
+        if (!existingProfile) {
+          const { error: profileInsertError } = await supabase.from("profiles").insert({ id: userId });
+          if (profileInsertError) throw profileInsertError;
+        }
+
+        const [settingsRes, tasksRes, recordsRes] = await Promise.all([
+          supabase.from("settings").select("settings").eq("user_id", userId).maybeSingle(),
+          supabase.from("tasks").select("id,name,category,fixed,frequency,priority,reminder_enabled,message,task_order").eq("user_id", userId).order("task_order", { ascending: true }),
+          supabase.from("daily_records").select("date,record").eq("user_id", userId),
+        ]);
+
+        const firstError = settingsRes.error || tasksRes.error || recordsRes.error;
+        if (firstError) throw firstError;
+
+        const cloudSettings = settingsRes.data?.settings || null;
+        const cloudTasks = tasksRes.data || [];
+        const cloudRecords = recordsRes.data || [];
+
+        let nextState;
+        if (cloudSettings || cloudTasks.length || cloudRecords.length) {
+          const base = defaultState();
+          nextState = {
+            ...base,
+            settings: cloudSettings?.settings || base.settings,
+            tasks: cloudTasks.length ? cloudTasks.map((t) => ({
+              id: t.id,
+              name: t.name,
+              category: t.category,
+              fixed: t.fixed,
+              frequency: t.frequency,
+              priority: t.priority,
+              reminderEnabled: t.reminder_enabled,
+              message: t.message || "",
+              order: t.task_order,
+            })) : base.tasks,
+            records: Object.fromEntries(cloudRecords.map((r) => [r.date, r.record || { status: {}, overrides: {}, sleep: {}, deepWork: {} }])),
+            demoDates: cloudSettings?.demoDates || [],
+          };
         } else {
-          const fresh = seedToday(defaultState());
-          setState(fresh);
+          nextState = defaultState();
+        }
+
+        if (!cancelled) {
+          setState(nextState);
+          hydratedRef.current = true;
           setStorageStatus("ok");
         }
-      } catch (e) {
-        try {
-          const fresh = seedToday(defaultState());
-          setState(fresh);
-          setStorageStatus("ok");
-        } catch {
-          setState(seedToday(defaultState()));
+      } catch (error) {
+        console.error("Winter Arc cloud load failed:", error);
+        if (!cancelled) {
           setStorageStatus("unavailable");
+          hydratedRef.current = false;
+          setState(null);
         }
       }
     })();
-  }, []);
 
-  // Save (debounced)
+    return () => { cancelled = true; };
+  }, [session]);
+
   useEffect(() => {
-    if (!state) return;
+    if (!state || !session?.user || !hydratedRef.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
+
     saveTimer.current = setTimeout(async () => {
       try {
-        const res = await window.storage.set(STORAGE_KEY, JSON.stringify(state), false);
-        if (!res) setStorageStatus("unavailable");
-      } catch {
+        const userId = session.user.id;
+        const settingsPayload = { settings: state.settings, demoDates: state.demoDates || [] };
+
+        const { error: settingsError } = await supabase.from("settings").upsert(
+          { user_id: userId, settings: settingsPayload, updated_at: new Date().toISOString() },
+          { onConflict: "user_id" }
+        );
+        if (settingsError) throw settingsError;
+
+        const taskRows = state.tasks.map((task) => ({
+          id: task.id,
+          user_id: userId,
+          name: task.name,
+          category: task.category,
+          fixed: !!task.fixed,
+          frequency: task.frequency || {},
+          priority: Number(task.priority) || 1,
+          reminder_enabled: !!task.reminderEnabled,
+          message: task.message || "",
+          task_order: Number(task.order) || 0,
+        }));
+
+        if (taskRows.length) {
+          const { error: tasksError } = await supabase.from("tasks").upsert(taskRows, { onConflict: "user_id,id" });
+          if (tasksError) throw tasksError;
+        }
+
+        const { data: existingTasks, error: existingTasksError } = await supabase.from("tasks").select("id").eq("user_id", userId);
+        if (existingTasksError) throw existingTasksError;
+        const currentIds = new Set(state.tasks.map((task) => task.id));
+        const removedIds = (existingTasks || []).map((row) => row.id).filter((id) => !currentIds.has(id));
+        if (removedIds.length) {
+          const { error: deleteTasksError } = await supabase.from("tasks").delete().eq("user_id", userId).in("id", removedIds);
+          if (deleteTasksError) throw deleteTasksError;
+        }
+
+        const recordRows = Object.entries(state.records || {}).map(([date, record]) => ({
+          user_id: userId,
+          date,
+          record: record || {},
+          updated_at: new Date().toISOString(),
+        }));
+
+        if (recordRows.length) {
+          const { error: recordsError } = await supabase.from("daily_records").upsert(recordRows, { onConflict: "user_id,date" });
+          if (recordsError) throw recordsError;
+        }
+
+        const { data: existingRecords, error: existingRecordsError } = await supabase.from("daily_records").select("date").eq("user_id", userId);
+        if (existingRecordsError) throw existingRecordsError;
+        const currentDates = new Set(Object.keys(state.records || {}));
+        const removedDates = (existingRecords || []).map((row) => row.date).filter((date) => !currentDates.has(date));
+        if (removedDates.length) {
+          const { error: deleteRecordsError } = await supabase.from("daily_records").delete().eq("user_id", userId).in("date", removedDates);
+          if (deleteRecordsError) throw deleteRecordsError;
+        }
+
+        setStorageStatus("ok");
+      } catch (error) {
+        console.error("Winter Arc cloud save failed:", error);
         setStorageStatus("unavailable");
       }
     }, 500);
+
     return () => clearTimeout(saveTimer.current);
-  }, [state]);
+  }, [state, session]);
 
   const handleExport = () => {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
@@ -1312,11 +1480,26 @@ export default function App() {
   const handleLoadDemo = () => { setState((s) => generateDemoHistory(s)); showToast("Demo history added"); };
   const handleClearDemo = () => { setState((s) => clearDemoHistory(s)); showToast("Demo data removed"); };
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  if (session === undefined) {
+    return (
+      <div className="wa-root">
+        <style>{CSS}</style>
+        <div className="boot-loader"><Snowflake size={22} className="spin-slow" /> Connecting to Winter Arc…</div>
+      </div>
+    );
+  }
+
+  if (!session) return <AuthScreen onLogin={() => {}} />;
+
   if (!state) {
     return (
       <div className="wa-root">
         <style>{CSS}</style>
-        <div className="boot-loader"><Snowflake size={22} className="spin-slow" /> Loading Winter Arc…</div>
+        <div className="boot-loader"><Snowflake size={22} className="spin-slow" /> Loading your Winter Arc…</div>
       </div>
     );
   }
@@ -1336,6 +1519,9 @@ export default function App() {
         {state.demoDates?.length > 0 && (
           <div className="demo-flag"><Sparkles size={12} /> Demo data active</div>
         )}
+        <button className="nav-btn" onClick={handleSignOut} style={{ marginTop: "auto" }}>
+          <X size={17} /><span>Sign out</span>
+        </button>
       </aside>
 
       <main className="main-area">
@@ -1498,7 +1684,6 @@ const CSS = `
 .task-main { display:flex; flex-direction: column; flex: 1; min-width: 0; }
 .task-name { font-size: 13.5px; font-weight: 500; }
 .task-row.done .task-name { color: var(--text-dim); text-decoration: line-through; text-decoration-color: var(--border); }
-.task-time { font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 .task-tag { font-size: 10.5px; color: var(--c-amber); background: rgba(214,167,92,0.12); padding: 2px 7px; border-radius: 5px; flex-shrink:0; }
 .task-menu-wrap { position: relative; flex-shrink: 0; }
 .task-menu { position:absolute; right:0; top: 32px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 9px; padding: 5px; display:flex; flex-direction:column; z-index: 60; min-width: 170px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }

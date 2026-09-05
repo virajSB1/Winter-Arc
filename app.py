@@ -1,3 +1,4 @@
+import json
 import re
 from pathlib import Path
 
@@ -13,8 +14,15 @@ st.set_page_config(
 
 
 def build_html():
-    jsx_path = Path(__file__).parent / "winter-arc.jsx"
+    jsx_path = Path(__file__).parent / "winter-arc-supabase.jsx"
     source = jsx_path.read_text(encoding="utf-8")
+
+    supabase_url = st.secrets.get("SUPABASE_URL", "")
+    supabase_publishable_key = st.secrets.get("SUPABASE_PUBLISHABLE_KEY", "")
+    if not supabase_url or not supabase_publishable_key:
+        raise RuntimeError(
+            "Missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY in Streamlit secrets."
+        )
 
     # Remove the three ES-module imports from the original React source.
     source = re.sub(
@@ -59,6 +67,14 @@ import React, {
   useRef
 } from "https://esm.sh/react@18.3.1";
 
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const supabase = createClient(
+  __SUPABASE_URL__,
+  __SUPABASE_PUBLISHABLE_KEY__,
+  { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }
+);
+
 import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
 
 import {
@@ -85,6 +101,9 @@ root.render(React.createElement(App));
     full_source = prelude + "\n" + source + mount
 
     # repr() safely embeds the source in the HTML script.
+    supabase_url_literal = json.dumps(supabase_url)
+    supabase_key_literal = json.dumps(supabase_publishable_key)
+    full_source = full_source.replace("__SUPABASE_URL__", supabase_url_literal).replace("__SUPABASE_PUBLISHABLE_KEY__", supabase_key_literal)
     source_literal = repr(full_source)
 
     return f'''<!doctype html>
