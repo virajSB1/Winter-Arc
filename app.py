@@ -17,8 +17,9 @@ def build_html():
     jsx_path = Path(__file__).parent / "winter-arc-supabase.jsx"
     source = jsx_path.read_text(encoding="utf-8")
 
-    supabase_url = st.secrets.get("SUPABASE_URL", "")
-    supabase_publishable_key = st.secrets.get("SUPABASE_PUBLISHABLE_KEY", "")
+    supabase_url = st.secrets.get("https://hayplwyprfztlzyanzuu.supabase.co", "")
+    supabase_publishable_key = st.secrets.get("sb_publishable_BBQHKghFhIJIMej8Xq-EGA_aUF9Efqi
+", "")
     if not supabase_url or not supabase_publishable_key:
         raise RuntimeError(
             "Missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY in Streamlit secrets."
