@@ -5,134 +5,96 @@ from pathlib import Path
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(
-    page_title="Winter Arc",
-    page_icon="❄️",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
+st.set_page_config(page_title="Winter Arc", page_icon="❄️", layout="wide", initial_sidebar_state="collapsed")
+
+
+def get_secret(name: str) -> str:
+    value = st.secrets.get(name)
+    if not value:
+        raise RuntimeError(f"Missing Streamlit secret: {name}")
+    return str(value)
 
 
 def build_html():
-    jsx_path = Path(__file__).parent / "winter-arc-supabase.jsx"
-    source = jsx_path.read_text(encoding="utf-8")
-
-    supabase_url = st.secrets.get("https://hayplwyprfztlzyanzuu.supabase.co", "")
-    supabase_publishable_key = st.secrets.get("sb_publishable_BBQHKghFhIJIMej8Xq-EGA_aUF9Efqi
-", "")
-    if not supabase_url or not supabase_publishable_key:
-        raise RuntimeError(
-            "Missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY in Streamlit secrets."
+    jsx_path = Path(__file__).resolve().parent / "winter-arc-supabase.jsx"
+    if not jsx_path.exists():
+        raise FileNotFoundError(
+            "winter-arc-supabase.jsx was not found next to app.py. "
+            "Make sure both files are committed to the same GitHub repository/folder."
         )
 
-    # Remove the three ES-module imports from the original React source.
-    source = re.sub(
-        r'^import React,.*?from ["\']react["\'];\s*',
-        '', source, count=1, flags=re.MULTILINE | re.DOTALL
-    )
-    source = re.sub(
-        r'^import\s*\{[\s\S]*?\}\s*from\s*["\']lucide-react["\'];\s*',
-        '', source, count=1, flags=re.MULTILINE
-    )
-    source = re.sub(
-        r'^import\s*\{[\s\S]*?\}\s*from\s*["\']recharts["\'];\s*',
-        '', source, count=1, flags=re.MULTILINE
-    )
+    source = jsx_path.read_text(encoding="utf-8")
 
-    # Turn `export default function App()` into a normal function declaration.
+    source = re.sub(
+        r'^\s*import React,.*?from ["\']react["\'];\s*',
+        "", source, count=1, flags=re.MULTILINE | re.DOTALL
+    )
+    source = re.sub(
+        r'^\s*import\s*\{[\s\S]*?\}\s*from\s*["\']lucide-react["\'];\s*',
+        "", source, count=1, flags=re.MULTILINE
+    )
+    source = re.sub(
+        r'^\s*import\s*\{[\s\S]*?\}\s*from\s*["\']recharts["\'];\s*',
+        "", source, count=1, flags=re.MULTILINE
+    )
     source = source.replace("export default function App()", "function App()", 1)
 
-    # Replace the non-browser window.storage API used by the original app.
-    source = source.replace(
-        """const res = await window.storage.get(STORAGE_KEY, false);
-        if (res?.value) {
-          setState(JSON.parse(res.value));""",
-        """const value = localStorage.getItem(STORAGE_KEY);
-        if (value) {
-          setState(JSON.parse(value));""",
-    )
-    source = source.replace(
-        """const res = await window.storage.set(STORAGE_KEY, JSON.stringify(state), false);
-        if (!res) setStorageStatus("unavailable");""",
-        """localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        setStorageStatus("ok");""",
-    )
+    supabase_url = json.dumps(get_secret("SUPABASE_URL"))
+    supabase_key = json.dumps(get_secret("SUPABASE_PUBLISHABLE_KEY"))
 
-    # The original JSX expects these names to exist in its module scope.
-    prelude = r'''
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef
-} from "https://esm.sh/react@18.3.1";
+    prelude = f'''
+import React, {{
+  useState, useEffect, useMemo, useCallback, useRef
+}} from "https://esm.sh/react@18.3.1";
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {{ createRoot }} from "https://esm.sh/react-dom@18.3.1/client";
 
-const supabase = createClient(
-  __SUPABASE_URL__,
-  __SUPABASE_PUBLISHABLE_KEY__,
-  { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }
-);
-
-import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
-
-import {
+import {{
   Snowflake, Dumbbell, Activity, Beef, Droplet, Moon, BookOpen, Sparkles,
   Settings as SettingsIcon, Calendar, BarChart3, Home, Plus, Trash2,
   GripVertical, Check, X, Clock, Flame, ChevronLeft, ChevronRight, Star,
   Download, Upload, RotateCcw, AlertCircle, ChevronDown, MoreVertical,
   SkipForward, PencilLine, Sunrise, Wind, Shirt, Sparkle, Utensils, Sofa,
   ListChecks, CircleCheck, CircleDashed, CircleSlash, Ban
-} from "https://esm.sh/lucide-react@0.468.0?deps=react@18.3.1";
+}} from "https://esm.sh/lucide-react@0.468.0?deps=react@18.3.1";
 
-import {
+import {{
   ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ScatterChart, Scatter, ZAxis, Cell
-} from "https://esm.sh/recharts@2.12.7?deps=react@18.3.1,react-dom@18.3.1";
+}} from "https://esm.sh/recharts@2.12.7?deps=react@18.3.1,react-dom@18.3.1";
+
+import {{ createClient }} from "https://esm.sh/@supabase/supabase-js@2";
+
+const supabase = createClient({supabase_url}, {supabase_key});
 '''
 
-    mount = r'''
-
+    mount = '''
 const root = createRoot(document.getElementById("root"));
 root.render(React.createElement(App));
 '''
 
-    full_source = prelude + "\n" + source + mount
+    full_source = prelude + "\n" + source + "\n" + mount
+    source_literal = json.dumps(full_source)
 
-    # repr() safely embeds the source in the HTML script.
-    supabase_url_literal = json.dumps(supabase_url)
-    supabase_key_literal = json.dumps(supabase_publishable_key)
-    full_source = full_source.replace("__SUPABASE_URL__", supabase_url_literal).replace("__SUPABASE_PUBLISHABLE_KEY__", supabase_key_literal)
-    source_literal = repr(full_source)
-
-    return f'''<!doctype html>
+    html = r'''<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-html, body, #root {{
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  min-height: 100%;
-  background: #0A0F14;
-}}
-body {{ overflow-x: hidden; }}
-* {{ box-sizing: border-box; }}
+html, body, #root { margin: 0; padding: 0; width: 100%; min-height: 100%; background: #0A0F14; }
+body { overflow-x: hidden; }
+* { box-sizing: border-box; }
 </style>
 </head>
 <body>
 <div id="root"></div>
-
 <script src="https://unpkg.com/@babel/standalone@7.26.0/babel.min.js"></script>
 <script>
-(async function () {{
+(async function () {
   const root = document.getElementById("root");
 
-  function showError(error) {{
+  function showError(error) {
     console.error("Winter Arc error:", error);
     root.innerHTML =
       '<div style="min-height:100vh;background:#0A0F14;color:#E7EEF2;padding:32px;font-family:Inter,system-ui,sans-serif">' +
@@ -140,36 +102,38 @@ body {{ overflow-x: hidden; }}
       '<pre style="color:#ff8f8f;white-space:pre-wrap;line-height:1.5">' +
       String(error && (error.stack || error.message) || error) +
       '</pre></div>';
-  }}
+  }
 
-  try {{
+  try {
     if (!window.Babel) throw new Error("Babel failed to load");
 
-    const appSource = {source_literal};
+    const appSource = __APP_SOURCE__;
 
-    // Convert JSX to JavaScript, while preserving ESM imports.
-    const transformed = Babel.transform(appSource, {{
+    const transformed = Babel.transform(appSource, {
       presets: ["react"],
       sourceType: "module"
-    }}).code;
+    }).code;
 
-    // Execute as a genuine browser ES module. This avoids CommonJS/require.
-    const blob = new Blob([transformed], {{ type: "text/javascript" }});
+    const blob = new Blob([transformed], { type: "text/javascript" });
     const url = URL.createObjectURL(blob);
 
-    try {{
+    try {
       await import(url);
-    }} finally {{
+    } finally {
       URL.revokeObjectURL(url);
-    }}
-  }} catch (error) {{
+    }
+  } catch (error) {
     showError(error);
-  }}
-}})();
+  }
+})();
 </script>
 </body>
 </html>'''
+    return html.replace("__APP_SOURCE__", source_literal)
 
 
-html = build_html()
-components.html(html, height=1400, scrolling=True)
+try:
+    components.html(build_html(), height=1400, scrolling=True)
+except Exception as error:
+    st.error("Winter Arc configuration error")
+    st.exception(error)
