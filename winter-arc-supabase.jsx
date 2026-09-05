@@ -1229,10 +1229,10 @@ function AuthScreen({ onLogin }) {
   };
 
   return (
-    <div className="wa-root">
+    <div className="wa-root auth-root">
       <style>{CSS}</style>
-      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
-        <form onSubmit={submit} className="section-card" style={{ width: "min(420px, 100%)" }}>
+      <div className="auth-shell">
+        <form onSubmit={submit} className="section-card auth-card">
           <div className="section-head"><Snowflake size={18} /><h3>Winter Arc</h3></div>
           <div className="section-body">
             <p className="muted-text" style={{ maxWidth: "none" }}>
@@ -1670,6 +1670,13 @@ const CSS = `
 
 /* Sections */
 .section-card { background: var(--bg-panel); border: 1px solid var(--border-soft); border-radius: 12px; }
+.auth-root { display: block; width: 100%; min-height: 100vh; }
+.auth-shell { width: 100%; min-height: 100vh; display: grid; place-items: center; padding: 32px 20px; }
+.auth-card { width: min(420px, 100%); }
+.auth-card .section-head { padding: 15px 18px; }
+.auth-card .section-body { padding: 16px 18px 18px; gap: 10px; }
+.auth-card .field { gap: 5px; }
+.auth-card .field input { min-height: 40px; }
 .section-head { display:flex; align-items:center; gap:9px; padding: 13px 16px; border-bottom: 1px solid var(--border-soft); }
 .section-head h3 { font-size: 14.5px; }
 .section-body { padding: 12px 14px; display:flex; flex-direction: column; gap: 8px; }
